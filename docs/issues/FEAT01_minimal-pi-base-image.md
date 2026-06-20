@@ -38,11 +38,11 @@ Author a `Containerfile` that produces a minimal OCI image containing Node.js LT
 
 ## Acceptance Criteria
 
-- [ ] `podman build -t pi-box:base .` (or documented equivalent) completes without error
-- [ ] `podman run --rm -it pi-box:base pi --version` prints a pi version string
-- [ ] Image is based on `node:lts-alpine` (or equivalent minimal, well-known base)
-- [ ] Image contains only the minimum runtime — no editors, compilers, or project-specific tools
-- [ ] Build instructions are documented (README or dedicated doc)
+- [x] `podman build -t pi-box:base .` (or documented equivalent) completes without error
+- [x] `podman run --rm -it pi-box:base pi --version` prints a pi version string
+- [x] Image is based on `node:lts-alpine` (or equivalent minimal, well-known base)
+- [x] Image contains only the minimum runtime — no editors, compilers, or project-specific tools
+- [x] Build instructions are documented (README or dedicated doc)
 
 ## Tasks
 
