@@ -38,11 +38,11 @@ On subsequent runs, retrieve the stored label with `podman inspect` and compare 
 
 ## Acceptance Criteria
 
-- [ ] Image is built when it does not exist locally
-- [ ] Image is NOT rebuilt when `container.yml` is unchanged (SHA matches stored label)
-- [ ] `--force-rebuild` always triggers a rebuild, ignoring the staleness check
-- [ ] Profile without a `container.yml` runs `pi-box:base` without attempting a build
-- [ ] Build failure exits the script with a non-zero code and a clear error message
+- [x] Image is built when it does not exist locally
+- [x] Image is NOT rebuilt when `container.yml` is unchanged (SHA matches stored label)
+- [x] `--force-rebuild` always triggers a rebuild, ignoring the staleness check
+- [x] Profile without a `container.yml` runs `pi-box:base` without attempting a build
+- [x] Build failure exits the script with a non-zero code and a clear error message
 
 ## Dependencies
 

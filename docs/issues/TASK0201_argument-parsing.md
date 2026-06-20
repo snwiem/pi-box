@@ -31,11 +31,11 @@ Implementation approach:
 
 ## Acceptance Criteria
 
-- [ ] All flags listed above are parsed correctly
-- [ ] Multiple `-v` flags are collected without dropping any
-- [ ] `--project-root` defaults to `$PWD` when not specified
-- [ ] Missing `<profile>` argument prints a usage message and exits with code 1
-- [ ] Unknown/unsupported flags print an error and exit with code 1
+- [x] All flags listed above are parsed correctly
+- [x] Multiple `-v` flags are collected without dropping any
+- [x] `--project-root` defaults to `$PWD` when not specified
+- [x] Missing `<profile>` argument prints a usage message and exits with code 1
+- [x] Unknown/unsupported flags print an error and exit with code 1
 
 ## Dependencies
 

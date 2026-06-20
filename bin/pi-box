@@ -1,0 +1,251 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# pi-box — rootless Podman launcher for the pi coding agent
+#
+# Usage: pi-box <subcommand> [options]
+# Run `pi-box help` or `pi-box run --help` for details.
+# -----------------------------------------------------------------------------
+
+PI_BOX_PROFILES_DIR="${HOME}/.pi-box"
+
+# -----------------------------------------------------------------------------
+# usage — print help and exit 0 (or let caller exit with a specific code)
+# -----------------------------------------------------------------------------
+usage() {
+  cat <<EOF
+Usage: pi-box <subcommand> [options]
+
+Subcommands:
+  run <profile> [options]   Launch a pi session in the named profile container
+  list-sessions <profile>   List existing sessions for a profile (not yet implemented)
+
+Run options:
+  --force-rebuild           Force a fresh profile image build ignoring cache
+  --session <name>          Name the session (auto UUID when omitted; wired in FEAT-06)
+  --project-root <path>     Project root directory (default: \$PWD; wired in FEAT-05)
+  -v <host:container>       Mount a host path into the container (repeatable; wired in FEAT-03)
+
+Examples:
+  pi-box run myprofile
+  pi-box run myprofile --force-rebuild
+  pi-box run myprofile -v \$(pwd):/workspace -v /data:/data:ro
+EOF
+}
+
+# -----------------------------------------------------------------------------
+# sha256_file <path>
+# Print the SHA-256 hex digest of a file.  Works on Linux (sha256sum) and
+# macOS (shasum).
+# -----------------------------------------------------------------------------
+sha256_file() {
+  local file="$1"
+  if command -v sha256sum > /dev/null 2>&1; then
+    sha256sum "$file" | cut -d' ' -f1
+  elif command -v shasum > /dev/null 2>&1; then
+    shasum -a 256 "$file" | cut -d' ' -f1
+  else
+    echo "error: no SHA-256 utility found (need sha256sum or shasum)" >&2
+    exit 1
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# cmd_run — implement the `run` subcommand
+# -----------------------------------------------------------------------------
+cmd_run() {
+  # --------------------------------------------------------------------------
+  # Argument parsing (TASK-02-01)
+  # Parse ALL flags for the full launcher now so parsing need not be revisited
+  # in FEAT-03/04/05/06.  Variables not yet wired up are parsed but unused.
+  # --------------------------------------------------------------------------
+  local PROFILE=""
+  local FORCE_REBUILD=false
+  local SESSION=""
+  local PROJECT_ROOT="${PWD}"
+  local MOUNTS=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force-rebuild)
+        FORCE_REBUILD=true
+        shift
+        ;;
+      --session)
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
+          echo "error: --session requires a non-empty value" >&2
+          usage; exit 1
+        fi
+        SESSION="$2"
+        shift 2
+        ;;
+      --project-root)
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
+          echo "error: --project-root requires a non-empty value" >&2
+          usage; exit 1
+        fi
+        PROJECT_ROOT="$2"
+        shift 2
+        ;;
+      -v)
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
+          echo "error: -v requires a value" >&2
+          usage; exit 1
+        fi
+        MOUNTS+=("$2")
+        shift 2
+        ;;
+      --*)
+        echo "error: unknown flag: $1" >&2
+        usage; exit 1
+        ;;
+      -*)
+        echo "error: unknown flag: $1" >&2
+        usage; exit 1
+        ;;
+      *)
+        if [[ -z "${PROFILE}" ]]; then
+          PROFILE="$1"
+        else
+          echo "error: unexpected argument: $1" >&2
+          usage; exit 1
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "${PROFILE}" ]]; then
+    echo "error: <profile> is required" >&2
+    usage; exit 1
+  fi
+
+  if [[ ! "${PROFILE}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "error: invalid profile name '${PROFILE}': only a-z, A-Z, 0-9, _ and - are allowed" >&2
+    exit 1
+  fi
+
+  # --------------------------------------------------------------------------
+  # Profile directory resolution
+  # Convention (PRD §8): ~/.pi-box/<profile>/
+  # --------------------------------------------------------------------------
+  local PROFILE_DIR="${PI_BOX_PROFILES_DIR}/${PROFILE}"
+  if [[ ! -d "${PROFILE_DIR}" ]]; then
+    echo "error: profile directory not found: ${PROFILE_DIR}" >&2
+    echo "       Create it and add an optional container.yml to get started." >&2
+    exit 1
+  fi
+
+  # --------------------------------------------------------------------------
+  # Image build step (TASK-02-02)
+  # Decision tree:
+  #   1. No container.yml  → IMAGE=pi-box:base, skip build
+  #   2. --force-rebuild   → always build
+  #   3. image missing     → build
+  #   4. container.yml SHA changed → build
+  #   5. otherwise         → skip build, use existing image
+  # --------------------------------------------------------------------------
+  local IMAGE
+  local CONTAINER_YML="${PROFILE_DIR}/container.yml"
+
+  if [[ ! -f "${CONTAINER_YML}" ]]; then
+    # No container.yml — fall back to base image, no build needed
+    IMAGE="pi-box:base"
+    echo "==> No container.yml found; using base image: ${IMAGE}"
+    if [[ "${FORCE_REBUILD}" == true ]]; then
+      echo "==> (--force-rebuild has no effect: no container.yml in profile directory)" >&2
+    fi
+  else
+    IMAGE="pi-box-${PROFILE}:latest"
+    local DO_BUILD=false
+
+    if [[ "${FORCE_REBUILD}" == true ]]; then
+      echo "==> --force-rebuild set; scheduling build of: ${IMAGE}"
+      DO_BUILD=true
+    elif ! podman image exists "${IMAGE}" 2>/dev/null; then
+      echo "==> Image not found locally; scheduling build of: ${IMAGE}"
+      DO_BUILD=true
+    else
+      # Staleness check: compare current SHA256 against label stored at build time
+      local CURRENT_SHA
+      CURRENT_SHA="$(sha256_file "${CONTAINER_YML}")"
+      local STORED_SHA
+      STORED_SHA="$(podman inspect \
+        --format '{{ index .Labels "pi-box.container-yml-sha" }}' \
+        "${IMAGE}" 2>/dev/null || true)"
+      if [[ "${CURRENT_SHA}" != "${STORED_SHA}" ]]; then
+        echo "==> container.yml changed (${CURRENT_SHA:0:12}… vs ${STORED_SHA:0:12}…); scheduling rebuild"
+        DO_BUILD=true
+      fi
+    fi
+
+    if [[ "${DO_BUILD}" == true ]]; then
+      echo "==> Building profile image: ${IMAGE}"
+      local BUILD_SHA
+      BUILD_SHA="$(sha256_file "${CONTAINER_YML}")"
+      if ! podman build \
+          --label "pi-box.container-yml-sha=${BUILD_SHA}" \
+          -f "${CONTAINER_YML}" \
+          -t "${IMAGE}" \
+          "${PROFILE_DIR}"; then
+        echo "error: podman build failed for profile '${PROFILE}'" >&2
+        exit 1
+      fi
+      echo "==> Build complete: ${IMAGE}"
+    else
+      echo "==> Profile image up to date: ${IMAGE}"
+    fi
+  fi
+
+  # --------------------------------------------------------------------------
+  # Container run invocation (TASK-02-03)
+  # RUN_ARGS is an array so later features can append flags cleanly:
+  #   FEAT-03 appends -v mount flags
+  #   FEAT-04 appends profile config file mounts
+  #   FEAT-05 appends session directory mount
+  # exec replaces the shell process → correct signal propagation and exit code.
+  # --------------------------------------------------------------------------
+  local RUN_ARGS=(--rm -it)
+  # FEAT-03: -v mounts will be appended here
+  # FEAT-04: profile config mounts will be appended here
+  # FEAT-05: session mount will be appended here
+
+  exec podman run "${RUN_ARGS[@]}" "${IMAGE}" pi
+}
+
+# -----------------------------------------------------------------------------
+# cmd_list_sessions — stub, implemented in FEAT-06
+# -----------------------------------------------------------------------------
+cmd_list_sessions() {
+  echo "error: list-sessions not yet implemented" >&2
+  exit 1
+}
+
+# -----------------------------------------------------------------------------
+# Main dispatch
+# -----------------------------------------------------------------------------
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+case "$1" in
+  run)
+    shift
+    cmd_run "$@"
+    ;;
+  list-sessions)
+    shift
+    cmd_list_sessions "$@"
+    ;;
+  help|--help|-h)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "error: unknown subcommand: $1" >&2
+    usage
+    exit 1
+    ;;
+esac

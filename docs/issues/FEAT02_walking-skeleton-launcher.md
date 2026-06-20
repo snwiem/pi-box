@@ -41,14 +41,14 @@ Implement the minimal `pi-box run <profile>` script that parses arguments, build
 
 ## Acceptance Criteria
 
-- [ ] `pi-box run <profile>` starts an interactive pi session in the profile image
-- [ ] If the profile image does not exist locally, it is built automatically before starting
-- [ ] If the profile image exists and `container.yml` is unchanged, no rebuild occurs
-- [ ] `--force-rebuild` forces a fresh image build regardless of cache state
-- [ ] Profile directory without a `container.yml` uses `pi-box:base` directly (no build step)
-- [ ] Script requires only `bash` and `podman` — no other host dependencies
-- [ ] Script is executable (`chmod +x`) and runnable as `./pi-box run <profile>` without installation
-- [ ] Missing or invalid `<profile>` argument prints usage and exits non-zero
+- [x] `pi-box run <profile>` starts an interactive pi session in the profile image
+- [x] If the profile image does not exist locally, it is built automatically before starting
+- [x] If the profile image exists and `container.yml` is unchanged, no rebuild occurs
+- [x] `--force-rebuild` forces a fresh image build regardless of cache state
+- [x] Profile directory without a `container.yml` uses `pi-box:base` directly (no build step)
+- [x] Script requires only `bash` and `podman` — no other host dependencies
+- [x] Script is executable (`chmod +x`) and runnable as `./pi-box run <profile>` without installation
+- [x] Missing or invalid `<profile>` argument prints usage and exits non-zero
 
 ## Tasks
 

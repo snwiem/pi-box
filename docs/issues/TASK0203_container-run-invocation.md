@@ -37,10 +37,10 @@ Structure the run invocation so these can be appended cleanly (e.g. build the fl
 
 ## Acceptance Criteria
 
-- [ ] `podman run` is invoked with `--rm` and `-it`
-- [ ] Pi starts interactively inside the container and the terminal is usable
-- [ ] Container is automatically removed after the session exits
-- [ ] Script exits with the same exit code as the `podman run` command (preserve `$?`)
+- [x] `podman run` is invoked with `--rm` and `-it`
+- [x] Pi starts interactively inside the container and the terminal is usable
+- [x] Container is automatically removed after the session exits
+- [x] Script exits with the same exit code as the `podman run` command (preserve `$?`)
 
 ## Dependencies
 
