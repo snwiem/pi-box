@@ -37,11 +37,11 @@ Wire up the `-v <host-path>:<container-path>` flags collected during argument pa
 
 ## Acceptance Criteria
 
-- [ ] `-v <host-path>:<container-path>` is accepted and forwarded to `podman run -v …`
-- [ ] Read-only mounts (e.g. `-v /data:/data:ro`) are supported without modification
-- [ ] Multiple `-v` flags in a single command are all passed through correctly
-- [ ] No mounts are silently injected beyond those the user specified (session mount deferred to FEAT-05)
-- [ ] A command with no `-v` flags runs without error (zero mounts is valid)
+- [x] `-v <host-path>:<container-path>` is accepted and forwarded to `podman run -v …`
+- [x] Read-only mounts (e.g. `-v /data:/data:ro`) are supported without modification
+- [x] Multiple `-v` flags in a single command are all passed through correctly
+- [x] No mounts are silently injected beyond those the user specified (session mount deferred to FEAT-05)
+- [x] A command with no `-v` flags runs without error (zero mounts is valid)
 
 ## Tasks
 

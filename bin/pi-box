@@ -25,7 +25,7 @@ Run options:
   --force-rebuild           Force a fresh profile image build ignoring cache
   --session <name>          Name the session (auto UUID when omitted; wired in FEAT-06)
   --project-root <path>     Project root directory (default: \$PWD; wired in FEAT-05)
-  -v <host:container>       Mount a host path into the container (repeatable; wired in FEAT-03)
+  -v <host:container>       Mount a host path into the container (repeatable)
 
 Examples:
   pi-box run myprofile
@@ -207,7 +207,10 @@ cmd_run() {
   # exec replaces the shell process → correct signal propagation and exit code.
   # --------------------------------------------------------------------------
   local RUN_ARGS=(--rm -it)
-  # FEAT-03: -v mounts will be appended here
+  # FEAT-03: pass through user-supplied -v mounts
+  for mount in "${MOUNTS[@]+${MOUNTS[@]}}"; do
+    RUN_ARGS+=(-v "${mount}")
+  done
   # FEAT-04: profile config mounts will be appended here
   # FEAT-05: session mount will be appended here
 
