@@ -2,7 +2,7 @@
 
 **Type:** Epic
 **ID:** EPIC-02
-**Status:** Open
+**Status:** Done
 **PRD Reference:** FR-02, FR-03, FR-04
 
 ---
@@ -33,7 +33,7 @@ A developer can type `pi-box run <profile> -v <project>:/workspace` from any dir
 
 | ID | Title | Status |
 |---|---|---|
-| FEAT-02 | Walking-skeleton `pi-box run` launcher | Open |
+| FEAT-02 | Walking-skeleton `pi-box run` launcher | Done |
 | FEAT-03 | Volume mounting via `-v` CLI flags | Open |
 | FEAT-04 | Pi config file mounting from profile | Open |
 
