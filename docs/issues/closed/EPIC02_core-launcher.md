@@ -34,15 +34,15 @@ A developer can type `pi-box run <profile> -v <project>:/workspace` from any dir
 | ID | Title | Status |
 |---|---|---|
 | FEAT-02 | Walking-skeleton `pi-box run` launcher | Done |
-| FEAT-03 | Volume mounting via `-v` CLI flags | Open |
-| FEAT-04 | Pi config file mounting from profile | Open |
+| FEAT-03 | Volume mounting via `-v` CLI flags | Done |
+| FEAT-04 | Pi config file mounting from profile | Done |
 
 ## Acceptance Criteria
 
-- [ ] All child Features are completed and accepted
-- [ ] `pi-box run <profile> -v $(pwd):/workspace` starts a scoped pi session end-to-end
-- [ ] Script requires only `bash` and `podman` — no additional host dependencies
-- [ ] Profile directory without a `container.yml` falls back cleanly to `pi-box:base`
+- [x] All child Features are completed and accepted
+- [x] `pi-box run <profile> -v $(pwd):/workspace` starts a scoped pi session end-to-end
+- [x] Script requires only `bash` and `podman` — no additional host dependencies
+- [x] Profile directory without a `container.yml` falls back cleanly to `pi-box:base`
 
 ## Dependencies
 
