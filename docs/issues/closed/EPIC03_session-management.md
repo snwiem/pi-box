@@ -2,7 +2,7 @@
 
 **Type:** Epic
 **ID:** EPIC-03
-**Status:** Open
+**Status:** Done
 **PRD Reference:** FR-05, FR-06
 
 ---
@@ -35,14 +35,14 @@ A developer can stop and restart a pi-box session and resume exactly where they 
 
 | ID | Title | Status |
 |---|---|---|
-| FEAT-05 | Automatic session persistence | Open |
-| FEAT-06 | Named sessions, UUID fallback, parallel sessions & listing | Open |
+| FEAT-05 | Automatic session persistence | Done |
+| FEAT-06 | Named sessions, UUID fallback, parallel sessions & listing | Done |
 
 ## Acceptance Criteria
 
-- [ ] All child Features are completed and accepted
-- [ ] Stopping and restarting a named session resumes pi context correctly
-- [ ] Two parallel `pi-box run` invocations against the same project use separate session directories and do not interfere
+- [x] All child Features are completed and accepted
+- [x] Stopping and restarting a named session resumes pi context correctly
+- [x] Two parallel `pi-box run` invocations against the same project use separate session directories and do not interfere
 
 ## Dependencies
 
