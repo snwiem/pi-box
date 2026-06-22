@@ -32,7 +32,8 @@ A profile is a directory that configures the pi instance. The recommended locati
 ```
 ~/.pi-box/my-profile/
   container.yml         # OCI image definition (extends pi-box base image)
-  AGENTS.md             # pi context file
+  AGENTS.md             # pi context file (loaded globally, every working directory)
+  APPEND_SYSTEM.md      # text appended to the default pi system prompt
   skills/               # pi skills
   extensions/           # pi extensions (TypeScript)
   prompts/              # pi prompt templates
@@ -63,6 +64,7 @@ Session data is persisted to a project-local directory so your context survives 
 
 | Path | Contents |
 |---|---|
+| [`docs/profiles.md`](docs/profiles.md) | Profile directory layout & config file mapping |
 | [`docs/prd/`](docs/prd/) | Product Requirement Documents (append-only history) |
 | [`docs/issues/`](docs/issues/) | Open backlog — EPICs, FEATures, TASKs |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records |

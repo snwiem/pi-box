@@ -1,0 +1,11 @@
+# pi-box session data — never commit
+.pi-box/
+
+# Pi project-local config/sessions
+.pi/
+
+# Editor and OS artefacts
+.DS_Store
+*.swp
+*.swo
+*~

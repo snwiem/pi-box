@@ -211,7 +211,37 @@ cmd_run() {
   for mount in "${MOUNTS[@]+${MOUNTS[@]}}"; do
     RUN_ARGS+=(-v "${mount}")
   done
-  # FEAT-04: profile config mounts will be appended here
+  # FEAT-04: mount profile config files into the container (read-only).
+  # Each entry is   <profile-path> → <container-path>
+  # Only paths that exist in the profile directory are mounted; absent paths
+  # are silently skipped so pi falls back to its own defaults.
+  #
+  # Container user is root (node:22-alpine, no USER set) → config root is
+  # /root/.pi/agent/ inside the container.
+  #
+  # Mapping (validated against pi docs and local install):
+  #   skills/          → /root/.pi/agent/skills/
+  #   extensions/      → /root/.pi/agent/extensions/
+  #   prompts/         → /root/.pi/agent/prompts/
+  #   themes/          → /root/.pi/agent/themes/
+  #   AGENTS.md        → /root/.pi/agent/AGENTS.md     (global; loaded for every cwd)
+  #   APPEND_SYSTEM.md → /root/.pi/agent/APPEND_SYSTEM.md
+  local -a PROFILE_MOUNTS=(
+    "skills:/root/.pi/agent/skills"
+    "extensions:/root/.pi/agent/extensions"
+    "prompts:/root/.pi/agent/prompts"
+    "themes:/root/.pi/agent/themes"
+    "AGENTS.md:/root/.pi/agent/AGENTS.md"
+    "APPEND_SYSTEM.md:/root/.pi/agent/APPEND_SYSTEM.md"
+  )
+  for entry in "${PROFILE_MOUNTS[@]}"; do
+    local src="${PROFILE_DIR}/${entry%%:*}"
+    local dst="${entry#*:}"
+    if [[ -e "${src}" ]]; then
+      RUN_ARGS+=(-v "${src}:${dst}:ro")
+      echo "==> Mounting profile config: ${entry%%:*} → ${dst}"
+    fi
+  done
   # FEAT-05: session mount will be appended here
 
   exec podman run "${RUN_ARGS[@]}" "${IMAGE}" pi

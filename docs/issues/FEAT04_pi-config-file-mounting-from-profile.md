@@ -2,7 +2,7 @@
 
 **Type:** Feature
 **ID:** FEAT-04
-**Status:** Open
+**Status:** Done
 **Parent Epic:** EPIC-02 — Core Launcher
 **PRD Reference:** FR-02
 
@@ -37,10 +37,10 @@ Mount the pi configuration files present in the profile directory (skills/, exte
 
 ## Acceptance Criteria
 
-- [ ] Each of the following, if present in the profile directory, is mounted into the container at the correct pi config path: `skills/`, `extensions/`, `AGENTS.md`, `APPEND_SYSTEM.md`, `prompts/`, `themes/`
-- [ ] If a config path is absent from the profile, it is not mounted and pi uses its own default behaviour for that config type
-- [ ] A profile directory containing none of the optional config files results in a clean vanilla pi session (no errors)
-- [ ] The mapping between profile paths and container paths is documented (README or `docs/profiles.md`)
+- [x] Each of the following, if present in the profile directory, is mounted into the container at the correct pi config path: `skills/`, `extensions/`, `AGENTS.md`, `APPEND_SYSTEM.md`, `prompts/`, `themes/`
+- [x] If a config path is absent from the profile, it is not mounted and pi uses its own default behaviour for that config type
+- [x] A profile directory containing none of the optional config files results in a clean vanilla pi session (no errors)
+- [x] The mapping between profile paths and container paths is documented (`docs/profiles.md`, linked from README)
 
 ## Tasks
 
