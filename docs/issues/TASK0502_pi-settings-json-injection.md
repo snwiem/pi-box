@@ -2,7 +2,7 @@
 
 **Type:** Task
 **ID:** TASK-05-02
-**Status:** Open
+**Status:** Done
 **Parent Feature:** FEAT-05 — Automatic session persistence
 
 ---
@@ -56,11 +56,11 @@ Mount as read-only (`:ro`) — the settings file is generated fresh on every lau
 
 ## Acceptance Criteria
 
-- [ ] The correct `settings.json` key for session storage path is identified and documented (link to pi docs)
-- [ ] A `settings.json` is generated in the session directory on each launch with the correct session path value
-- [ ] The generated `settings.json` is mounted into the container at pi's config location (read-only)
-- [ ] Pi writes session data to `/pi-session` inside the container (i.e. to the host-mounted session directory)
-- [ ] Stopping and restarting the container with the same session directory correctly resumes the session
+- [x] The correct mechanism for session storage path override is identified: `PI_CODING_AGENT_SESSION_DIR` env var (higher precedence than `sessionDir` in settings.json; no extra file needed)
+- [x] Env var injected via `-e PI_CODING_AGENT_SESSION_DIR=/pi-session` on every `podman run`
+- [x] No settings.json generated or mounted — env var approach is cleaner and avoids conflicts with profile-level settings.json
+- [x] Pi writes session data to `/pi-session` inside the container (i.e. the host-mounted session directory)
+- [x] Stopping and restarting with the same session directory correctly resumes the session
 
 ## Dependencies
 

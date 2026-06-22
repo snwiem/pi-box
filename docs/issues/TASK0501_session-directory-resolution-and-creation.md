@@ -2,7 +2,7 @@
 
 **Type:** Task
 **ID:** TASK-05-01
-**Status:** Open
+**Status:** Done
 **Parent Feature:** FEAT-05 — Automatic session persistence
 
 ---
@@ -42,10 +42,10 @@ PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd)"
 
 ## Acceptance Criteria
 
-- [ ] `PROJECT_ROOT` defaults to `$PWD` when `--project-root` is not provided
-- [ ] `--project-root <path>` sets `PROJECT_ROOT` to the given (resolved absolute) path
-- [ ] `mkdir -p "${SESSION_DIR}"` is called before `podman run`; no error if directory already exists
-- [ ] The session directory is mounted into the container at `/pi-session` via a `-v` flag
+- [x] `PROJECT_ROOT` defaults to `$PWD` when `--project-root` is not provided
+- [x] `--project-root <path>` sets `PROJECT_ROOT` to the given (resolved absolute) path
+- [x] `mkdir -p "${SESSION_DIR}"` is called before `podman run`; no error if directory already exists
+- [x] The session directory is mounted into the container at `/pi-session` via a `-v` flag
 
 ## Dependencies
 

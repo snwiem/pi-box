@@ -2,7 +2,7 @@
 
 **Type:** Feature
 **ID:** FEAT-05
-**Status:** Open
+**Status:** Done
 **Parent Epic:** EPIC-03 — Session Management
 **PRD Reference:** FR-05
 
@@ -39,13 +39,13 @@ Automatically persist pi session data to `<project-root>/.pi-box/<profile>/sessi
 
 ## Acceptance Criteria
 
-- [ ] Session data is stored at `<project-root>/.pi-box/<profile>/sessions/<session-id>/` on the host
-- [ ] `<project-root>` defaults to `$PWD` when `--project-root` is not specified
-- [ ] `--project-root <path>` correctly overrides the session root
-- [ ] The session directory is created automatically on first launch (`mkdir -p`)
-- [ ] Pi is configured via `settings.json` to write session data to the container-internal path that maps to the host session directory
-- [ ] Stopping the container and restarting with the same session directory resumes the pi session correctly
-- [ ] `.pi-box/` is documented in the README as a directory to add to `.gitignore`
+- [x] Session data is stored at `<project-root>/.pi-box/<profile>/sessions/<session-id>/` on the host
+- [x] `<project-root>` defaults to `$PWD` when `--project-root` is not specified
+- [x] `--project-root <path>` correctly overrides the session root
+- [x] The session directory is created automatically on first launch (`mkdir -p`)
+- [x] Pi is configured via `PI_CODING_AGENT_SESSION_DIR` env var (not settings.json) to write session data to `/pi-session` inside the container
+- [x] Stopping the container and restarting with the same session directory resumes the pi session correctly
+- [x] `.pi-box/` is documented in README and `docs/sessions.md` and excluded via `.gitignore`
 
 ## Tasks
 

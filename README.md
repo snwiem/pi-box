@@ -65,6 +65,7 @@ Session data is persisted to a project-local directory so your context survives 
 | Path | Contents |
 |---|---|
 | [`docs/profiles.md`](docs/profiles.md) | Profile directory layout & config file mapping |
+| [`docs/sessions.md`](docs/sessions.md) | Session persistence, directory layout & gitignore guidance |
 | [`docs/prd/`](docs/prd/) | Product Requirement Documents (append-only history) |
 | [`docs/issues/`](docs/issues/) | Open backlog — EPICs, FEATures, TASKs |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records |

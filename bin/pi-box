@@ -242,7 +242,30 @@ cmd_run() {
       echo "==> Mounting profile config: ${entry%%:*} → ${dst}"
     fi
   done
-  # FEAT-05: session mount will be appended here
+  # FEAT-05: session directory resolution, creation, and mount.
+  #
+  # TASK-05-01: resolve project root and construct the session directory path.
+  #   PROJECT_ROOT is already set from argument parsing (defaults to $PWD or
+  #   the value of --project-root). Resolve it to an absolute path here using
+  #   $(cd … && pwd) for portability (avoids requiring realpath on all platforms).
+  if [[ ! -d "${PROJECT_ROOT}" ]]; then
+    echo "error: --project-root path does not exist: ${PROJECT_ROOT}" >&2
+    exit 1
+  fi
+  PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd)"
+  local SESSION_ID="${SESSION:-default}"
+  local SESSION_DIR="${PROJECT_ROOT}/.pi-box/${PROFILE}/sessions/${SESSION_ID}"
+  mkdir -p "${SESSION_DIR}"
+  echo "==> Session directory: ${SESSION_DIR}"
+  RUN_ARGS+=(-v "${SESSION_DIR}:/pi-session")
+
+  # TASK-05-02: redirect pi session storage to /pi-session inside the container.
+  #
+  # Precedence (from pi docs): --session-dir > PI_CODING_AGENT_SESSION_DIR > sessionDir
+  # Using the env var avoids generating and mounting an extra settings.json file,
+  # keeps the base image clean, and works even if the user has their own
+  # settings.json in the profile directory.
+  RUN_ARGS+=(-e "PI_CODING_AGENT_SESSION_DIR=/pi-session")
 
   exec podman run "${RUN_ARGS[@]}" "${IMAGE}" pi
 }
