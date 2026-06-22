@@ -26,6 +26,8 @@ Run options:
   --session <name>                Name the session (auto UUID when omitted)
   --project-root <path>           Project root directory (default: \$PWD)
   -v <host:container>             Mount a host path into the container (repeatable)
+  -- <cmd> [args...]              Override the default 'pi' command; all tokens after
+                                  '--' are passed verbatim to the container runtime
 
 List-sessions options:
   [<profile>]                     Scope listing to a single profile (default: all)
@@ -35,6 +37,8 @@ Examples:
   pi-box run myprofile
   pi-box run myprofile --session my-feature -v \$(pwd):/workspace
   pi-box run myprofile -v \$(pwd):/workspace -v /data:/data:ro
+  pi-box run myprofile -- bash
+  pi-box run myprofile -- sh -c "echo hello"
   pi-box list-sessions
   pi-box list-sessions myprofile
   pi-box list-sessions --project-root ~/projects/other
@@ -79,6 +83,34 @@ sha256_file() {
 # cmd_run — implement the `run` subcommand
 # -----------------------------------------------------------------------------
 cmd_run() {
+  # --------------------------------------------------------------------------
+  # TASK-07-01: pre-scan for '--' separator BEFORE all other flag parsing so
+  # that tokens intended for the inner command (e.g. '-- node --version') are
+  # never consumed by pi-box's own case statement.
+  #
+  # On exit from this block:
+  #   CMD   — array of tokens after '--' (empty when no '--' was found)
+  #   "$@" — everything before '--', unchanged for the standard flag parser
+  # --------------------------------------------------------------------------
+  local CMD=()
+  local _RAW_ARGS=("$@")
+  local _found_sep=false
+  local _sep_idx=-1
+  for _i in "${!_RAW_ARGS[@]}"; do
+    if [[ "${_RAW_ARGS[_i]}" == "--" ]]; then
+      _found_sep=true
+      _sep_idx="${_i}"
+      break
+    fi
+  done
+  if [[ "${_found_sep}" == true ]]; then
+    CMD=("${_RAW_ARGS[@]:$((_sep_idx + 1))}")
+    set -- "${_RAW_ARGS[@]:0:${_sep_idx}}"
+    if [[ ${#CMD[@]} -eq 0 ]]; then
+      echo "pi-box: warning: '--' provided with no command; defaulting to 'pi'" >&2
+    fi
+  fi
+
   # --------------------------------------------------------------------------
   # Argument parsing (TASK-02-01)
   # Parse ALL flags for the full launcher now so parsing need not be revisited
@@ -230,7 +262,7 @@ cmd_run() {
   #   FEAT-05 appends session directory mount
   # exec replaces the shell process → correct signal propagation and exit code.
   # --------------------------------------------------------------------------
-  local RUN_ARGS=(--rm -it)
+  local RUN_ARGS=(--rm)
   # FEAT-03: pass through user-supplied -v mounts
   for mount in "${MOUNTS[@]+${MOUNTS[@]}}"; do
     RUN_ARGS+=(-v "${mount}")
@@ -309,7 +341,29 @@ cmd_run() {
   # settings.json in the profile directory.
   RUN_ARGS+=(-e "PI_CODING_AGENT_SESSION_DIR=/pi-session")
 
-  exec podman run "${RUN_ARGS[@]}" "${IMAGE}" pi
+  # --------------------------------------------------------------------------
+  # TASK-07-02: resolve effective command and TTY flags.
+  #
+  # CMD was populated by the '--' pre-parser above (TASK-07-01).
+  #   - No '--'  → CMD is empty  → start 'pi' with existing TTY behaviour
+  #   - '--' present → CMD holds user-supplied tokens → always allocate TTY
+  #
+  # TTY_FLAGS is kept as a separate variable so the future '--no-tty' flag
+  # (PRD-001 v2) can suppress it with a one-line change.
+  # --------------------------------------------------------------------------
+  local EFFECTIVE_CMD
+  # TTY_FLAGS is the single control point for TTY/interactive-stdin allocation.
+  # v1: always allocate a TTY for both normal 'pi' launches and custom commands.
+  # v2: a future '--no-tty' flag will set TTY_FLAGS=() to suppress allocation
+  #     for non-interactive / scripted use-cases (PRD-001 §5 Future, OQ-01).
+  local TTY_FLAGS=("-it")
+  if [[ ${#CMD[@]} -eq 0 ]]; then
+    EFFECTIVE_CMD=("pi")
+  else
+    EFFECTIVE_CMD=("${CMD[@]}")
+  fi
+
+  exec podman run "${RUN_ARGS[@]}" "${TTY_FLAGS[@]+${TTY_FLAGS[@]}}" "${IMAGE}" "${EFFECTIVE_CMD[@]}"
 }
 
 # -----------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 **Type:** Epic
 **ID:** EPIC-04
-**Status:** Open
+**Status:** Closed
 **PRD Reference:** PRD-001 — Custom Container Command
 
 ---

@@ -2,7 +2,7 @@
 
 **Type:** Task
 **ID:** TASK-07-02
-**Status:** Open
+**Status:** Closed
 **Parent Feature:** FEAT-07 — `--` command override and TTY allocation
 
 ---
