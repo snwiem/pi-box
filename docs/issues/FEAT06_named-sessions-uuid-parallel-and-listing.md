@@ -2,7 +2,7 @@
 
 **Type:** Feature
 **ID:** FEAT-06
-**Status:** Open
+**Status:** Done
 **Parent Epic:** EPIC-03 — Session Management
 **PRD Reference:** FR-06
 
@@ -38,13 +38,15 @@ Replace the placeholder session ID from FEAT-05 with real session naming: `--ses
 
 ## Acceptance Criteria
 
-- [ ] `--session <name>` stores session data at `<project-root>/.pi-box/<profile>/sessions/<name>/`
-- [ ] Without `--session`, a UUID is generated with `uuidgen` and the session ID is printed to stdout before pi starts (e.g. `Session: a1b2c3d4-…`)
-- [ ] Two parallel `pi-box run` invocations on the same project (with different or no `--session` values) use fully separate session directories and do not corrupt each other
-- [ ] `pi-box list-sessions` (using `$PWD` as project root) lists all session directories for all profiles under `.pi-box/`
-- [ ] `pi-box list-sessions <profile>` scopes the listing to the named profile
-- [ ] Each row in `list-sessions` output includes: profile name, session name/UUID, and last-modified timestamp
-- [ ] `list-sessions` exits cleanly with a "no sessions found" message when the sessions directory doesn't exist yet
+- [x] `--session <name>` stores session data at `<project-root>/.pi-box/<profile>/sessions/<name>/`
+- [x] Without `--session`, a UUID is generated with `uuidgen` (fallback: `/proc/sys/kernel/random/uuid`) and printed as `==> Session: <uuid>` before pi starts
+- [x] Two parallel `pi-box run` invocations with different/no `--session` values use fully separate session directories and do not corrupt each other
+- [x] `pi-box list-sessions` (using `$PWD` as project root) lists all session dirs for all profiles under `.pi-box/`
+- [x] `pi-box list-sessions <profile>` scopes the listing to the named profile
+- [x] Each row includes: profile name, session name/UUID, and last-modified timestamp
+- [x] `list-sessions` exits cleanly with a "no sessions found" message when the directory doesn't exist yet
+- [x] `--project-root` respected by `list-sessions`
+- [x] Session names and profile filters validated to prevent path traversal
 
 ## Tasks
 

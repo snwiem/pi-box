@@ -18,20 +18,44 @@ usage() {
 Usage: pi-box <subcommand> [options]
 
 Subcommands:
-  run <profile> [options]   Launch a pi session in the named profile container
-  list-sessions <profile>   List existing sessions for a profile (not yet implemented)
+  run <profile> [options]         Launch a pi session in the named profile container
+  list-sessions [<profile>]       List existing sessions (all profiles or one)
 
 Run options:
-  --force-rebuild           Force a fresh profile image build ignoring cache
-  --session <name>          Name the session (auto UUID when omitted; wired in FEAT-06)
-  --project-root <path>     Project root directory (default: \$PWD; wired in FEAT-05)
-  -v <host:container>       Mount a host path into the container (repeatable)
+  --force-rebuild                 Force a fresh profile image build ignoring cache
+  --session <name>                Name the session (auto UUID when omitted)
+  --project-root <path>           Project root directory (default: \$PWD)
+  -v <host:container>             Mount a host path into the container (repeatable)
+
+List-sessions options:
+  [<profile>]                     Scope listing to a single profile (default: all)
+  --project-root <path>           Project root directory (default: \$PWD)
 
 Examples:
   pi-box run myprofile
-  pi-box run myprofile --force-rebuild
+  pi-box run myprofile --session my-feature -v \$(pwd):/workspace
   pi-box run myprofile -v \$(pwd):/workspace -v /data:/data:ro
+  pi-box list-sessions
+  pi-box list-sessions myprofile
+  pi-box list-sessions --project-root ~/projects/other
 EOF
+}
+
+# -----------------------------------------------------------------------------
+# generate_uuid
+# Emit a random UUID.  Tries uuidgen first (Linux util-linux / macOS), then
+# falls back to /proc/sys/kernel/random/uuid (Linux kernel ≥2.6), then fails
+# with a clear error rather than silently producing a non-random identifier.
+# -----------------------------------------------------------------------------
+generate_uuid() {
+  if command -v uuidgen > /dev/null 2>&1; then
+    uuidgen | tr '[:upper:]' '[:lower:]'
+  elif [[ -r /proc/sys/kernel/random/uuid ]]; then
+    cat /proc/sys/kernel/random/uuid
+  else
+    echo "error: cannot generate UUID: neither uuidgen nor /proc/sys/kernel/random/uuid is available" >&2
+    exit 1
+  fi
 }
 
 # -----------------------------------------------------------------------------
@@ -253,7 +277,25 @@ cmd_run() {
     exit 1
   fi
   PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd)"
-  local SESSION_ID="${SESSION:-default}"
+  # FEAT-06: resolve SESSION_ID from --session or generate a UUID fallback.
+  # Validate session name: allow alphanumerics, hyphens, underscores, dots, and
+  # forward slashes only — consistent with PROFILE validation and prevents
+  # path-traversal via sequences like ../../etc.
+  if [[ -n "${SESSION}" && ! "${SESSION}" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+    echo "error: invalid session name '${SESSION}': only a-z, A-Z, 0-9, ., _, - and / are allowed" >&2
+    exit 1
+  fi
+  if [[ "${SESSION}" == *".."* ]]; then
+    echo "error: session name must not contain '..': ${SESSION}" >&2
+    exit 1
+  fi
+  local SESSION_ID
+  if [[ -n "${SESSION}" ]]; then
+    SESSION_ID="${SESSION}"
+  else
+    SESSION_ID="$(generate_uuid)"
+    echo "==> Session: ${SESSION_ID}"
+  fi
   local SESSION_DIR="${PROJECT_ROOT}/.pi-box/${PROFILE}/sessions/${SESSION_ID}"
   mkdir -p "${SESSION_DIR}"
   echo "==> Session directory: ${SESSION_DIR}"
@@ -271,11 +313,119 @@ cmd_run() {
 }
 
 # -----------------------------------------------------------------------------
-# cmd_list_sessions — stub, implemented in FEAT-06
+# cmd_list_sessions — list sessions stored under <project-root>/.pi-box/
+#
+# Usage: list-sessions [<profile>] [--project-root <path>]
 # -----------------------------------------------------------------------------
 cmd_list_sessions() {
-  echo "error: list-sessions not yet implemented" >&2
-  exit 1
+  local PROFILE_FILTER=""
+  local PROJECT_ROOT="${PWD}"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --project-root)
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
+          echo "error: --project-root requires a non-empty value" >&2
+          usage; exit 1
+        fi
+        PROJECT_ROOT="$2"
+        shift 2
+        ;;
+      --*)
+        echo "error: unknown flag: $1" >&2
+        usage; exit 1
+        ;;
+      *)
+        if [[ -z "${PROFILE_FILTER}" ]]; then
+          PROFILE_FILTER="$1"
+        else
+          echo "error: unexpected argument: $1" >&2
+          usage; exit 1
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  if [[ ! -d "${PROJECT_ROOT}" ]]; then
+    echo "error: --project-root path does not exist: ${PROJECT_ROOT}" >&2
+    exit 1
+  fi
+  PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd)"
+
+  # Validate the profile filter if provided (consistent with PROFILE validation
+  # in cmd_run and prevents path-traversal via e.g. '../../etc').
+  if [[ -n "${PROFILE_FILTER}" && ! "${PROFILE_FILTER}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "error: invalid profile name '${PROFILE_FILTER}': only a-z, A-Z, 0-9, _ and - are allowed" >&2
+    exit 1
+  fi
+
+  local SESSIONS_BASE="${PROJECT_ROOT}/.pi-box"
+
+  # Collect (profile, session, mtime) tuples from the filesystem.
+  # Layout: .pi-box/<profile>/sessions/<session-id>/
+  # Use three parallel arrays instead of a delimited string so that session
+  # names containing arbitrary characters (e.g. '.', '-') are safe.
+  local -a ROW_PROFILE=()
+  local -a ROW_SESSION=()
+  local -a ROW_MTIME=()
+  local found=false
+
+  # Determine which profile directories to scan.
+  local -a PROFILE_DIRS=()
+  if [[ -n "${PROFILE_FILTER}" ]]; then
+    PROFILE_DIRS=("${SESSIONS_BASE}/${PROFILE_FILTER}")
+  else
+    # Glob all profile directories; skip gracefully if none exist.
+    if [[ -d "${SESSIONS_BASE}" ]]; then
+      while IFS= read -r -d '' pdir; do
+        PROFILE_DIRS+=("${pdir}")
+      done < <(find "${SESSIONS_BASE}" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+    fi
+  fi
+
+  for pdir in "${PROFILE_DIRS[@]+${PROFILE_DIRS[@]}}"; do
+    local pname
+    pname="$(basename "${pdir}")"
+    local sbase="${pdir}/sessions"
+    [[ -d "${sbase}" ]] || continue
+
+    while IFS= read -r -d '' sdir; do
+      local sname
+      sname="$(basename "${sdir}")"
+      # Last-modified time of the session directory itself.
+      # Use printf '%(%Y-%m-%d %H:%M)T' with stat mtime seconds for portability.
+      local mtime
+      if stat --version > /dev/null 2>&1; then
+        # GNU stat (Linux)
+        mtime="$(stat -c '%y' "${sdir}" | cut -c1-16)"
+      else
+        # BSD stat (macOS)
+        mtime="$(stat -f '%Sm' -t '%Y-%m-%d %H:%M' "${sdir}")"
+      fi
+      ROW_PROFILE+=("${pname}")
+      ROW_SESSION+=("${sname}")
+      ROW_MTIME+=("${mtime}")
+      found=true
+    done < <(find "${sbase}" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+  done
+
+  if [[ "${found}" == false ]]; then
+    if [[ -n "${PROFILE_FILTER}" ]]; then
+      echo "No sessions found for profile '${PROFILE_FILTER}' under ${PROJECT_ROOT}/.pi-box/"
+    else
+      echo "No sessions found under ${PROJECT_ROOT}/.pi-box/"
+    fi
+    exit 0
+  fi
+
+  # Print table with fixed-width columns.
+  printf '%-20s  %-36s  %s\n' 'PROFILE' 'SESSION' 'LAST MODIFIED'
+  printf '%-20s  %-36s  %s\n' '-------' '-------' '-------------'
+  local i
+  for (( i=0; i<${#ROW_PROFILE[@]}; i++ )); do
+    printf '%-20s  %-36s  %s\n' "${ROW_PROFILE[i]}" "${ROW_SESSION[i]}" "${ROW_MTIME[i]}"
+  done
 }
 
 # -----------------------------------------------------------------------------
